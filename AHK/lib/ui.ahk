@@ -12,28 +12,23 @@ createGUI() {
     Gui, font, Q5 s12 bold, Century Gothic
     Gui, add, Text,     % "x10 y10 ReadOnly BackgroundTrans", % "Mongo Cluster Setup"    
 
-
     Gui, font, Q5 s10 norm, Consolas
-    
-    ; Ports
     Gui, add, Text, % lblFirstPortOptions  " vlblFirstPort ReadOnly BackgroundTrans", % "First Port for a Shard"
-    Gui, add, Edit, % fldFirstPortOptions  " vFirstPort BackgroundTrans", 30000
-    
-
+    Gui, add, Edit, % FirstPortOptions  " vFirstPort gGetFields BackgroundTrans", 30000
+   
     Gui, font, Q5 s11 bold, Century Gothic
-    Gui, add, Text, % lblShardNamesTitleOptions " vlblShardNamesTitle Multi BackgroundTrans", % "Shard_Name, number_of nodes (1 per line)`nEx: Cork, 9"
+    Gui, add, Text, % lblShardNamesTitleOptions " vlblShardNamesTitle Multi BackgroundTrans", % "Shard_Name, number_of nodes (1 per line)`nEx: Cork, 9  (max " MAX_NODES " nodes per shard)"
     Gui, font, Q5 s12 norm, Century Gothic
-    Gui, add, Edit, % fldShardNamesOptions " vfldShardNames gGetFields", % readConfig()
+    Gui, add, Edit, % ShardNamesOptions " vShardNames gGetFields", % readConfig()
     Gui, font, Q5 s10 norm, Consolas
-    Gui, add, Edit, % fldReport " vfldReport ReadOnly", % generateReport()
-
-
+    Gui, add, Edit, % ReportOptions " vReport ReadOnly", % generateReport()
     
     Gui, font, Q5 s12, Century Gothic
     Gui, add, Button, % ButtonSetupOptions  " vButtonSetup gButtonSetup Default", % "Setup"
     Gui, add, Button, % ButtonLaunchOptions " vButtonLaunch",        % "Launch"
     Gui, add, Button, % ButtonReloadOptions " vButtonReload",        % "Reload"
     Gui, show, x80 y400, % config.appTitle
+    getFields()
     Return
 }
 
@@ -56,30 +51,26 @@ updateControlPositions() {
 
     y := 60
     lblFirstPortOptions := "0x200 x10 y" y " w" config.lblWidth " h" config.fldHeight
-    fldFirstPortOptions := "Limit5 Number 0x200 x" config.lblWidth + 10 " y" y " w" config.fldWidth "  h" config.fldHeight " center"
-
+    FirstPortOptions := "Limit5 Number 0x200 x" config.lblWidth + 10 " y" y " w" config.fldWidth "  h" config.fldHeight " center"
 
     y += config.fldHeight + 30
     lblShardNamesTitleOptions := "x10 y" y 
 
     y += config.fldHeight + 30
-    fldShardNamesOptions := "0x200 x10 y" y " w" config.appWidth//2 -20 "  h" config.appHeight -y -50
-    fldReportOptions := "0x200 x" config.appWidth//2 + 10 " y" y " w" config.appWidth//2 -20 "  h" config.appHeight -y -50
-
+    ShardNamesOptions := "0x200 x10 y" y " w" config.appWidth//2 -20 -100 "  h" config.appHeight -y -50
+    ReportOptions := "0x200 x" config.appWidth//2 + 10 -100 " y" y " w" config.appWidth//2 -20 +100 "  h" config.appHeight -y -50
     
-    GuiControl, Move, lblFirstPort,              % lblFirstPortOptions
-    GuiControl, Move, fldFirstPort,              % fldFirstPortOptions
 
-    GuiControl, Move, lblShardNamesTitle,        % lblShardNamesTitleOptions
-    GuiControl, Move, fldShardNames,             % fldShardNamesOptions
-    GuiControl, Move, fldReport,                 % fldReportOptions
-
-    GuiControl, MoveDraw, Bg,   % BgOptions
-    GuiControl, MoveDraw, Icon,   % IconOptions
-    GuiControl, Move, ButtonSetup, % ButtonSetupOptions
-    GuiControl, Move, ButtonLaunch, % ButtonLaunchOptions
-    GuiControl, Move, ButtonReload, % ButtonReloadOptions
-
+    GuiControl, Move, lblFirstPort,        % lblFirstPortOptions
+    GuiControl, Move, FirstPort,           % FirstPortOptions
+    GuiControl, Move, lblShardNamesTitle,  % lblShardNamesTitleOptions
+    GuiControl, Move, ShardNames,          % ShardNamesOptions
+    GuiControl, Move, Report,              % ReportOptions
+    GuiControl, MoveDraw, Bg,              % BgOptions
+    GuiControl, MoveDraw, Icon,            % IconOptions
+    GuiControl, Move, ButtonSetup,         % ButtonSetupOptions
+    GuiControl, Move, ButtonLaunch,        % ButtonLaunchOptions
+    GuiControl, Move, ButtonReload,        % ButtonReloadOptions
     Return
 }
 
@@ -92,18 +83,13 @@ ButtonReload() {
 getFields() {
     global
     Gui Submit, NoHide
-    cluster.firstPort := FirstPort
+    cluster.firstPort := firstPort
+    cluster.config := clean(ShardNames)
     GuiControl,, Report, % generateReport()
     return
 }
 
 ButtonSetup() {
-    ; cluster := { "clusters"      : 0
-    ;               , "shards"        : 0
-    ;               , "nodes"         : 0
-    ;               , "configServers" : 0 
-    ;               , "firstport"     : 0 }
-    
     valid := isValidSetup(cluster)
     MsgBox, % "Cluster:`n`nValid: " valid "`n`n" JSON.dump(cluster, "  ")
     return
@@ -130,10 +116,45 @@ isValidSetup(cluster) {
 }
 
 generateReport() {
-    ; getFields()
-    ; msgbox % JSON.dump(cluster, "  ")
-    return % "Report:`n`n" cluster.config
+
+    cfg := clean(cluster.config)
+    shards := StrSplit(cfg, "`n")
+    finalShards := []
+    finalShards["config"] := 3
+    
+
+    for s in shards {
+        str := Trim(shards[s])
+        if RegExMatch(str, "(\S*)\,\s*?(\d+)", match) {
+            finalShards[match1] := match2
+        }
+    }
+    cluster.nshards := 0
+    cluster.totalNodes := 0
+  
+    for k, v in finalShards {
+        if (k = "config")
+            port := cluster.configPort 
+        else
+            port := cluster.firstPort + (A_Index -1) * 200 
+        
+        nnodes := min(v, MAX_NODES)
+        cluster.totalNodes += nnodes
+        cluster.nshards++
+
+        finalShards[k] := []
+        loop, % nnodes
+        {
+            finalShards[k].push({ "nodeName" : k "_" A_Index "_" config.sufix, "port" : port++ })
+        }
+    }
+
+    ; cluster.totalNodes := totalNodes
+    cluster.shards     := finalShards
+    return % cluster.nshards " shards, " cluster.totalNodes " nodes`n`n" JSON.dump(cluster.shards, "  ")
 }
+
+
 
 
 GuiEscape:

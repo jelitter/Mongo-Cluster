@@ -1,28 +1,21 @@
+global MAX_NODES := 53 
+
 ; UI settings
 global config := { "appIcon"   : A_ScriptDir "\assets\icon.png"
                  , "appBg"     : A_ScriptDir "\assets\bg.png"
-                 , "appTitle"  : "Mongo Cluster"
+                 , "appTitle"  : "Mongo Cluster - Isaac Sanchez"
                  , "appWidth"  : 600
                  , "appHeight" : 800
                  , "fldHeight" : 30
                  , "fldWidth"  : 60
-                 , "lblWidth"  : 180 }
+                 , "lblWidth"  : 180 
+                 , "sufix" : "R00156019" }
 
 ; Cluster Settings
-global cluster := { "clusters"      : 0
-                  , "shards"        : 0
-                  , "nodes"         : 0
-                  , "configServers" : 0 
+global cluster := { "shards"        : []
+                  , "nshards"       : 0
+                  , "configServers" : 3 
                   , "firstport"     : 0 
-                  , "ports" : []
-                  , "config" : ""
-                  , "configPorts" : [ 26050, 26051, 26052 ] }
+                  , "config"        : ""
+                  , "configPort"    : 26050 }
 
-
-
-readConfig() {
-    FileRead, res, % "config.txt"
-    res := Trim(res)
-    cluster.config := res
-    return res
-}
