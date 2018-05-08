@@ -3,8 +3,8 @@ global MAX_NODES := 53
 ; UI settings
 global config := { "appIcon"   : A_ScriptDir "\assets\icon.png"
                  , "appBg"     : A_ScriptDir "\assets\bg.png"
-                 , "appTitle"  : "Mongo Cluster - Isaac Sanchez"
-                 , "appWidth"  : 600
+                 , "appTitle"  : "MongoDB Cluster"
+                 , "appWidth"  : 800
                  , "appHeight" : 800
                  , "fldHeight" : 30
                  , "fldWidth"  : 60
@@ -17,5 +17,6 @@ global cluster := { "shards"        : []
                   , "configServers" : 3 
                   , "firstport"     : 0 
                   , "config"        : ""
-                  , "configPort"    : 26050 }
+                  , "configPort"    : 26050 
+                  , "folder" : "" }
 

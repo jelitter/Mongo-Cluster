@@ -2,6 +2,8 @@ readConfig() {
     FileRead, res, % "config.txt"
     res := Trim(res)
     cluster.config := res
+    EnvGet, USERPROFILE, USERPROFILE
+    cluster.folder := USERPROFILE "\Desktop\cluster"
     return res
 }
 
@@ -15,4 +17,8 @@ clean(str) {
 
 min(a, b) {
     return (a < b) ? a : b
+}
+
+toLower(string="") {
+  return Format("{:L}", string)
 }
