@@ -19,6 +19,6 @@ global cluster := { "shards"        : []
                   , "firstport"     : 30000 
                   , "config"        : ""
                   , "configPort"    : 26050 
-                  , "routerPort"    : 60000
+                  , "routerPort"    : 50000
                   , "folder" : "" }
 

@@ -26,3 +26,7 @@ max(a, b) {
 toLower(string="") {
   return Format("{:L}", string)
 }
+
+toUpper(string="") {
+  return Format("{:U}", string)
+}
