@@ -19,6 +19,10 @@ min(a, b) {
     return (a < b) ? a : b
 }
 
+max(a, b) {
+    return (a > b) ? a : b
+}
+
 toLower(string="") {
   return Format("{:L}", string)
 }

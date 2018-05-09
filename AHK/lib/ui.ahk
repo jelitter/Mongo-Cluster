@@ -14,10 +14,10 @@ createGUI() {
 
     Gui, font, Q5 s10 norm, Consolas
     Gui, add, Text, % lblFirstPortOptions  " vlblFirstPort ReadOnly BackgroundTrans", % "First Port for a Shard"
-    Gui, add, Edit, % FirstPortOptions  " vFirstPort gGetFields BackgroundTrans", 30000
+    Gui, add, Edit, % FirstPortOptions  " vFirstPort gGetFields BackgroundTrans", % cluster.firstPort
    
     Gui, font, Q5 s11 bold, Century Gothic
-    Gui, add, Text, % lblShardNamesTitleOptions " vlblShardNamesTitle Multi BackgroundTrans", % "Shard_Name, number_of nodes (1 per line)`nEx: Cork, 9  (max " MAX_NODES " nodes per shard)"
+    Gui, add, Text, % lblShardNamesTitleOptions " vlblShardNamesTitle Multi BackgroundTrans", % "Shard_Name, number_of nodes (1 per line)`nE.g.:`nCork, 9  (" MIN_NODES " to " MAX_NODES " nodes per shard)"
     Gui, font, Q5 s12 norm, Century Gothic
     Gui, add, Edit, % ShardNamesOptions " vShardNames gGetFields", % readConfig()
     Gui, font, Q5 s10 norm, Consolas
@@ -91,7 +91,14 @@ ButtonReload() {
 getFields() {
     global
     Gui Submit, NoHide
-    cluster.firstPort := firstPort
+
+    if (firstPort <= 65535 and firstPort >= 1) {
+        cluster.firstPort := firstPort
+    } else {
+        GuiControl,, firstPort, % "30000"
+        MsgBox, 48, % config.appTitle, % "Port number must be between 1 and 65535"
+    } 
+
     cluster.config := clean(ShardNames)
     GuiControl,, Report, % generateReport()
     return
@@ -108,6 +115,7 @@ ButtonSetup() {
 }
 
 selectFolder() {
+    killMongos()
     FileSelectFolder, folder, , % A_ScriptDir, % "Select root folder for Cluster `n(a ""cluster"" folder will be created in it)"
     if !ErrorLevel {
         folder := RegExReplace(folder, "\\$")
@@ -118,14 +126,22 @@ selectFolder() {
             IfMsgBox, Yes
             {
                 FileRemoveDir, % newFolder, 1
+                if ErrorLevel
+                    MsgBox, 48, % config.appTitle, % ErrorLevel " Error removing folder: " A_LastError
                 FileCreateDir, % newFolder
-                MsgBox, 64, % config.appTitle, % newFolder "`n`ncreated"
+                if ErrorLevel
+                    MsgBox, 48, % config.appTitle, % ErrorLevel " Error creating folder: " A_LastError
+                else {
+                    run % newFolder
+                    MsgBox, 64, % config.appTitle, % newFolder "`n`ncreated"
+                }
             }
         } else {
             MsgBox, 68, % config.appTitle, % newFolder "`n`nCreate folder?"
             IfMsgBox, Yes
             {
                 FileCreateDir, % newFolder
+                run % newFolder
                 MsgBox, 64, % config.appTitle, % newFolder "`n`ncreated"
             }
         }
@@ -154,7 +170,7 @@ generateReport() {
     for s in shards {
         str := Trim(shards[s])
         if RegExMatch(str, "(\S*)\,\s*?(\d+)", match) {
-            finalShards[match1] := match2
+            finalShards[toLower(match1)] := match2
         }
     }
     cluster.nshards := 0
@@ -169,14 +185,16 @@ generateReport() {
             port := cluster.firstPort + (index -1) * 200 
         }
         
-        nnodes := min(v, MAX_NODES)
+        nnodes := min(v,      MAX_NODES)
+        nnodes := max(nnodes, MIN_NODES)
+
         cluster.totalNodes += nnodes
         cluster.nshards++
 
-        finalShards[k] := []
+        finalShards[toLower(k)] := []
         loop, % nnodes
         {
-            finalShards[k].push({ "name" : toLower(k) "_" (A_Index - 1) "_" config.sufix, "port" : port++ })
+            finalShards[toLower(k)].push({ "name" : toLower(k) "_" (A_Index - 1) "_" config.sufix, "port" : port++ })
         }
     }
 
