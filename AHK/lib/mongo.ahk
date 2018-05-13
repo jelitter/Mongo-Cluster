@@ -24,8 +24,10 @@ createNodeFolders() {
     setupShards(setupbat)
     setupConfigServer(setupbat)
     connectShards(setupbat)
+    setupSharding(setupbat)
 
     setupKillBat()
+    setupImportBat()
     run % cluster.folder
     MsgBox, 64, % config.appTitle, % cluster.nshards " cluster folders created successfully"
     return
@@ -59,9 +61,9 @@ setupShards(setupbat) {
                 port := cluster.shards[k][n].port
                 command .= "@start /b mongod --shardsvr --replSet " shard " --dbpath "  path " --port " port " --logpath " shard "\" name ".log`n"
             }
-            command .= "`n`n@ECHO WAITING FOR " toUpper(k) " SHARDS... `n"
-            command .= "@PAUSE`n"
-            command .= "`n"
+            ; command .= "`n`n@ECHO WAITING FOR " toUpper(k) " SHARDS... `n"
+            ; command .= "@PAUSE`n"
+            ; command .= "`n"
 
             for n in cluster.shards[k] {
                 port1 := cluster.shards[k][1].port
@@ -102,8 +104,8 @@ setupConfigServer(setupbat) {
     command .= "@start /b mongod --configsvr --replSet config --dbpath " path2 " --port " cfg_port2 " --logpath " "config\" cfg_name2 ".log`n"
     command .= "@start /b mongod --configsvr --replSet config --dbpath " path3 " --port " cfg_port3 " --logpath " "config\" cfg_name3 ".log`n`n"
     
-    command .= "`n`n@ECHO WAITING FOR CONFIG SEVERS... `n"
-    command .= "@PAUSE`n`n`n"
+    ; command .= "`n`n@ECHO WAITING FOR CONFIG SEVERS... `n"
+    ; command .= "@PAUSE`n`n`n"
 
     command .= mongoEval(cfg_port1, "rs.initiate()")
     command .= mongoEval(cfg_port1, "rs.add('localhost:" cfg_port2 "')") 
@@ -117,6 +119,7 @@ setupConfigServer(setupbat) {
     
 
     command .= "`n`n@ECHO WAITING FOR ROUTERS... `n"
+    command .= "`n`n@ECHO Make sure you can connect to Mongod at port " cluster.routerPort " ...`n"
     command .= "@PAUSE`n"
 
     FileAppend, % command, % setupbat  
@@ -142,14 +145,35 @@ connectShards(setupbat) {
 
             command .= mongoEval(cluster.routerPort, "sh.addShard('" shard "/localhost:" port1 "')") 
             command .= mongoEval(cluster.routerPort, "sh.addShard('" shard "/localhost:" port2 "')") 
-            ; command .= "@mongo --port " cluster.routerPort " --eval ""sh.addShard('" shard "/localhost:" port1 "')""`n"
-            ; command .= "@mongo --port " cluster.routerPort " --eval ""sh.addShard('" shard "/localhost:" port2 "')""`n"
         } 
     }
 
-    command .= mongoEval(cluster.routerPort, "sh.status()")"`n"
+    ; command .= mongoEval(cluster.routerPort, "sh.status()")"`n"
     ; command .= "`n@mongo --port " cluster.routerPort " --eval ""sh.status()""`n`n"
     FileAppend, % command, % setupbat
+    return
+}
+
+setupImportBat() {
+    batFile := cluster.folder "\import.bat"
+    jsonFile := A_ScriptDir "\data\restaurants.json"
+    command := "mongoimport /port:50000 /c restaurants " jsonFile
+    FileDelete, % batFile
+    FileAppend, % command, % batFile
+    return
+}
+
+setupSharding(setupbat) {
+
+    command .= mongoEval(cluster.routerPort, "sh.enableSharding('test')", "Enabling Sharding...") "`n" 
+    command .= mongoEval(cluster.routerPort, "sh.shardCollection('test.restaurants', { 'borough' : 'hashed' })", "Adding Shard Key...") "`n"
+    command .= "@ECHO Shard Setup complete. Run 'import.bat' to import JSON data.`n"
+
+    FileAppend, % command , % setupbat
+
+    ; sh.enableSharding("test")
+    ; sh.shardCollection("test.restaurants", { "borough" : "hashed" })
+    ; sh.shardCollection("test.restaurants", { "restaurant_id" : "hashed" })
     return
 }
 

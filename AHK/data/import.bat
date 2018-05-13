@@ -1,0 +1,1 @@
+mongoimport /port:50000 /c restaurants C:\Users\yojak\Desktop\cluster\data\restaurants.json
