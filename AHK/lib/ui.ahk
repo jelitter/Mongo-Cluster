@@ -182,7 +182,7 @@ generateReport() {
             port := cluster.configPort 
         } else {
             index++
-            port := cluster.firstPort + (index -1) * 200 
+            port := cluster.firstPort + (index -1) * cluster.portJump 
         }
         
         nnodes := min(v,      MAX_NODES)
