@@ -170,7 +170,9 @@ setupImportBat() {
 setupSharding(setupbat) {
     command .= mongoEval(cluster.routerPort, "sh.enableSharding('test')", "Enabling Sharding...") "`n" 
     command .= mongoEval(cluster.routerPort, "sh.shardCollection('test.restaurants', { cuisine: 1, borough: 1 })", "Adding Shard Key { cuisine, borough }...") "`n"
+    command .= mongoEval(cluster.routerPort, "sh.enableBalancing('test.restaurants')", "Enabling Balancer...") "`n"
     command .= mongoEval(cluster.routerPort, "sh.startBalancer()", "Starting Balancer...") "`n"
+    command .= mongoEval(cluster.routerPort, "use config `; db.settings.save( { _id:'chunksize', value: 1 } )", "Setting chunk size to 1 MB ...") "`n"
     command .= mongoEval(cluster.routerPort, "sh.status('test.restaurants')")
     command .= "`n`n@ECHO.`n"
     command .= "@ECHO Cluster Setup complete. Run 'import.bat' to import JSON data.`n"
