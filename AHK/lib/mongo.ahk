@@ -165,14 +165,15 @@ setupImportBat() {
     FileDelete, % batFile
     FileAppend, % command, % batFile
     return
-}
+}   
 
 setupSharding(setupbat) {
+
     command .= mongoEval(cluster.routerPort, "sh.enableSharding('test')", "Enabling Sharding...") "`n" 
     command .= mongoEval(cluster.routerPort, "sh.shardCollection('test.restaurants', { cuisine: 1, borough: 1 })", "Adding Shard Key { cuisine, borough }...") "`n"
     command .= mongoEval(cluster.routerPort, "sh.enableBalancing('test.restaurants')", "Enabling Balancer...") "`n"
     command .= mongoEval(cluster.routerPort, "sh.startBalancer()", "Starting Balancer...") "`n"
-    command .= mongoEval(cluster.routerPort, "use config `; db.settings.save( { _id:'chunksize', value: 1 } )", "Setting chunk size to 1 MB ...") "`n"
+    command .= mongoEval(cluster.routerPort, "db.settings.save( { _id:'chunksize', value: 1 } )", "Setting chunk size to 1 MB ...", 1) "`n"
     command .= mongoEval(cluster.routerPort, "sh.status('test.restaurants')")
     command .= "`n`n@ECHO.`n"
     command .= "@ECHO Cluster Setup complete. Run 'import.bat' to import JSON data.`n"
@@ -180,11 +181,17 @@ setupSharding(setupbat) {
     return
 }
 
-mongoEval(port, command, msg="") {
+mongoEval(port, command, msg="", config=0) {
+    dbstring := ""
+    if (config = 1) {
+        dbstring := " config "
+    }
     if (msg != "") {
-        return % "@ECHO.`n@ECHO " msg "`n@mongo --port " port " --quiet --eval ""printjson(" command ");""`n"
+        return % "@ECHO.`n@ECHO " msg "`n@mongo " dbstring " --port " port " --quiet --eval ""printjson(" command ");""`n"
 
     } else {
-        return % "@mongo --port " port " --quiet --eval ""printjson(" command ");""`n"
+        return % "@mongo " dbstring " --port " port " --quiet --eval ""printjson(" command ");""`n"
     }
 }
+
+; mongo config --port 50000 --quiet --eval "db.settings.save( { _id:'chunksize', value: 1 } )"
