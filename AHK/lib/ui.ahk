@@ -108,6 +108,7 @@ ButtonSetup() {
     valid := isValidSetup(cluster)
     if (valid) {
         killMongos()
+        setupFolder(cluster.folder)
         createNodeFolders()
     }
     ; MsgBox, % "Cluster:`n`nValid: " valid "`n`n" JSON.dump(cluster, "  ")
@@ -117,38 +118,48 @@ ButtonSetup() {
 selectFolder() {
     killMongos()
     FileSelectFolder, folder, , % A_ScriptDir, % "Select root folder for Cluster `n(a ""cluster"" folder will be created in it)"
+
     if !ErrorLevel {
         folder := RegExReplace(folder, "\\$")
-        newFolder := folder "\cluster"
+        newFolder := folder "\cluster"    
+        setupFolder(newFolder)
+        cluster.folder := newFolder
+        GuiControl,, FolderDisplay, % cluster.folder
+    }
+    return 
+}
 
-        if InStr(FileExist(newFolder), "D") {
-            MsgBox, 52, % config.appTitle, % newFolder "`n`nFolder already exists`nOverwrite?`n`n(Warning: all contet will be deleted)"
-            IfMsgBox, Yes
-            {
-                FileRemoveDir, % newFolder, 1
-                if ErrorLevel
-                    MsgBox, 48, % config.appTitle, % ErrorLevel " Error removing folder: " A_LastError
-                FileCreateDir, % newFolder
-                if ErrorLevel
-                    MsgBox, 48, % config.appTitle, % ErrorLevel " Error creating folder: " A_LastError
-                else {
-                    run % newFolder
-                    MsgBox, 64, % config.appTitle, % newFolder "`n`ncreated"
-                }
-            }
-        } else {
-            MsgBox, 68, % config.appTitle, % newFolder "`n`nCreate folder?"
-            IfMsgBox, Yes
-            {
-                FileCreateDir, % newFolder
+setupFolder(newFolder) {
+
+    if InStr(FileExist(newFolder), "D") {
+        MsgBox, 52, % config.appTitle, % newFolder "`n`nFolder already exists`nOverwrite?`n`n(Warning: all contet will be deleted)"
+        IfMsgBox, Yes
+        {
+            FileDelete, % newFolder "\*.*"
+            FileRemoveDir, % newFolder, 1
+            if ErrorLevel
+                MsgBox, 48, % config.appTitle, % ErrorLevel " Error removing folder: " A_LastError
+            FileCreateDir, % newFolder
+            if ErrorLevel
+                MsgBox, 48, % config.appTitle, % ErrorLevel " Error creating folder: " A_LastError
+            else {
                 run % newFolder
                 MsgBox, 64, % config.appTitle, % newFolder "`n`ncreated"
             }
         }
-
-        cluster.folder := newFolder
-        GuiControl,, FolderDisplay, % cluster.folder
+    } else {
+        MsgBox, 68, % config.appTitle, % newFolder "`n`nCreate folder?"
+        IfMsgBox, Yes
+        {
+            FileCreateDir, % newFolder
+            run % newFolder
+            MsgBox, 64, % config.appTitle, % newFolder "`n`ncreated"
+        }
     }
+
+    cluster.folder := newFolder
+    GuiControl,, FolderDisplay, % cluster.folder
+
     return
 }
 

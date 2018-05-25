@@ -10,13 +10,14 @@ global config := { "appIcon"   : A_ScriptDir "\assets\icon.png"
                  , "fldHeight" : 30
                  , "fldWidth"  : 60
                  , "lblWidth"  : 180 
-                 , "sufix" : "R00156019" }
+                 , "line"      : "------------------------------------------------------------------------"
+                 , "sufix"     : "R00156019" }
 
 ; Cluster Settings
 global cluster := { "shards"        : []
                   , "nshards"       : 0
                   , "configServers" : 3 
-                  , "hostname"      : "localhost"
+                  , "hostname"      : "127.0.0.1"  ; or "localhost"
                   , "firstport"     : 27000 
                   , "portJump"      : 100
                   , "config"        : ""

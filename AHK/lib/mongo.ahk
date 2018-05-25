@@ -24,6 +24,7 @@ createNodeFolders() {
 
     setupKillBat()
     setupImportBat()
+    setupRemoveBat()
 
     while !FileExist(setupbat) {
         sleep, 100
@@ -52,15 +53,14 @@ setupShards(setupbat) {
                 port := cluster.shards[k][n].port
                 command .= "@start /b mongod --shardsvr --bind_ip " cluster.hostname " --replSet " shard " --dbpath "  path " --port " port " --logpath " shard "\" name ".log`n"
             }
-            command .= "@ECHO Started Shard " toUpper(k) " with " cluster.shards[k].Length() " nodes.`n"
+            command .= echo("Started Shard " toUpper(k) " with " cluster.shards[k].Length() " nodes.")
         } 
     }
 
-    command .= "@ECHO.`n"
-    command .= "@ECHO WAITING FOR MONGOD's... `n"
+    command .= echo("WAITING FOR MONGOD's...")
     command .= "@PAUSE`n"
-    command .= "@ECHO.`n"
-    command .= "@ECHO Adding shards to replica set...`n"
+
+    command .= echo("Adding shards to replica set...")
 
     for k, v in cluster.shards {
         if (k !="config") {
@@ -100,17 +100,14 @@ setupConfigServer(setupbat) {
     cfg_port3 := cluster.shards["config"][3].port
 
     ; Setup Config Servers
-    command := "`n@REM ====== Config Servers ======`n`n"
-    command .= "`n`n@ECHO.`n"
-    command .= "@ECHO Starting Config Servers at ports " cfg_port1 ", " cfg_port2 ", " cfg_port3 " ...`n"
+    command := "`n`n@REM ====== Config Servers ======`n`n"
+    command .= echo("Starting Config Servers at ports " cfg_port1 ", " cfg_port2 ", " cfg_port3 " ...")
     command .= "@start /b mongod --configsvr --replSet config --dbpath " path1 " --port " cfg_port1 " --logpath " "config\" cfg_name1 ".log`n"
     command .= "@start /b mongod --configsvr --replSet config --dbpath " path2 " --port " cfg_port2 " --logpath " "config\" cfg_name2 ".log`n"
     command .= "@start /b mongod --configsvr --replSet config --dbpath " path3 " --port " cfg_port3 " --logpath " "config\" cfg_name3 ".log`n`n"
     
-    command .= "`n`n@ECHO.`n"
-    command .= "@ECHO WAITING FOR CONFIG SEVERS... `n"
-    command .= "@ECHO Make sure you can connect to Mongod at port " cluster.configPort " before continuing...`n"
-    command .= "@PAUSE`n`n`n"
+    command .= echo("WAITING FOR CONFIG SEVERS...`n Make sure you can connect to Mongod at port " cluster.configPort " before continuing... ")
+    command .= "`n@PAUSE`n`n`n"
 
     command .= mongoEval(cfg_port1, "rs.initiate({_id:'config',version:1,members:[{_id:0,host:'" cluster.hostname ":" cfg_port1 "'}]})")
     command .= mongoEval(cfg_port1, "rs.add('" cluster.hostname ":" cfg_port2 "')") 
@@ -118,16 +115,14 @@ setupConfigServer(setupbat) {
 
 
     ; Setup Routers
-    command .= "`n@REM ====== Routers ======`n`n"
-    command .= "`n`n@ECHO.`n"
-    command .= "@ECHO Starting Routers at ports " cluster.routerPort ", " cluster.routerPort+1 ", " cluster.routerPort+2 " ...`n"
+    command .= "`n`n@REM ====== Routers ======`n`n"
+    command .= echo("Starting Routers at ports " cluster.routerPort ", " cluster.routerPort+1 ", " cluster.routerPort+2 " ...")
     command .= "@start /b mongos --bind_ip " cluster.hostname " --configdb config/" cluster.hostname ":" cfg_port1 "," cluster.hostname ":" cfg_port2 "," cluster.hostname ":" cfg_port3 " --port " cluster.routerPort    " --logpath mongos1.log`n"
     command .= "@start /b mongos --bind_ip " cluster.hostname " --configdb config/" cluster.hostname ":" cfg_port1 "," cluster.hostname ":" cfg_port2 "," cluster.hostname ":" cfg_port3 " --port " cluster.routerPort +1 " --logpath mongos2.log`n"
     command .= "@start /b mongos --bind_ip " cluster.hostname " --configdb config/" cluster.hostname ":" cfg_port1 "," cluster.hostname ":" cfg_port2 "," cluster.hostname ":" cfg_port3 " --port " cluster.routerPort +2 " --logpath mongos3.log`n`n"
     
     command .= "`n`n@ECHO.`n"
-    command .= "@ECHO WAITING FOR ROUTERS... `n"
-    command .= "@ECHO Make sure you can connect to Mongod at port " cluster.routerPort " before continuing...`n"
+    command .= echo("WAITING FOR ROUTERS... `n Make sure you can connect to Mongod at port " cluster.routerPort " before continuing...")
     command .= "@PAUSE`n"
 
     FileAppend, % command, % setupbat  
@@ -161,37 +156,92 @@ connectShards(setupbat) {
 setupImportBat() {
     batFile := cluster.folder "\import.bat"
     jsonFile := A_ScriptDir "\data\restaurants.json"
-    command := "mongoimport /port:50000 /c restaurants " jsonFile
+    command := "mongoimport --db restaurantdb /port:50000 /c restaurants " jsonFile
     FileDelete, % batFile
     FileAppend, % command, % batFile
     return
 }   
 
-setupSharding(setupbat) {
+setupRemoveBat() {
 
-    command .= mongoEval(cluster.routerPort, "sh.enableSharding('test')", "Enabling Sharding...") "`n" 
-    command .= mongoEval(cluster.routerPort, "sh.shardCollection('test.restaurants', { cuisine: 1, borough: 1 })", "Adding Shard Key { cuisine, borough }...") "`n"
-    command .= mongoEval(cluster.routerPort, "sh.enableBalancing('test.restaurants')", "Enabling Balancer...") "`n"
+    batFile := cluster.folder "\remove.bat"
+    command := echo("Removing Replica Set...")
+    
+
+    ; 1. Shutdown Servers
+    ; mongo --port PORT NUMBER 
+    ; use admin 
+    ; db.shutdownServer()
+
+    ; 2. Remove secondary nodes
+    ; Connect to main node
+    ; rs.remove(”hostname:port number”)
+
+
+    ; 3. Remove primary nodes 
+    ; use local
+    ; db.system.replset.find() 
+    ; var mainServer = db.system.replset.find() 
+    ; db.system.replset.remove(mainServer)
+
+
+    for k, v in cluster.shards {
+        if (k !="config") {
+            for n in cluster.shards[k] {
+                port1 := cluster.shards[k][1].port
+                port  := cluster.shards[k][n].port
+
+                if (n != 1) {
+                    command .= mongoEval(port1, "rs.remove('" cluster.hostname ":" port "')", "Removing secondary node " n " from " toUpper(k)) "`n"
+                }
+
+            }
+            ; command .= mongoEval(port1, "db.system.replset.remove(db.system.replset.find())", "Removing main node from " toUpper(k), "local") "`n`n"
+            command .= mongoEval(port1
+                , " (function remove() { var mainNode = db.system.replset.find(); db.system.replset.remove(mainNode)})(); "
+                , "Removing main node from " toUpper(k)
+                , "local") "`n`n"
+
+
+            ; @mongo local --port 27100 --quiet --eval " (function remove() { var mainNode = db.system.replset.find(); mainNode; db.system.replset.remove(mainNode)})();  "
+
+        }
+    }
+    FileAppend, % command, % batFile
+
+    return
+}
+
+
+
+setupSharding(setupbat) {
+    command .= mongoEval(cluster.routerPort, "sh.enableSharding('restaurantdb')", "Enabling Sharding...") "`n" 
+    command .= mongoEval(cluster.routerPort, "sh.shardCollection('restaurantdb.restaurants', { cuisine: 1, borough: 1 })", "Adding Shard Key { cuisine, borough }...") "`n"
+    command .= mongoEval(cluster.routerPort, "db.settings.save( { _id:'chunksize', value: 1 } )", "Setting chunk size to 1 MB ...", "config") "`n"
+    command .= mongoEval(cluster.routerPort, "sh.enableBalancing('restaurantdb.restaurants')", "Enabling Balancer...") "`n"
     command .= mongoEval(cluster.routerPort, "sh.startBalancer()", "Starting Balancer...") "`n"
-    command .= mongoEval(cluster.routerPort, "db.settings.save( { _id:'chunksize', value: 1 } )", "Setting chunk size to 1 MB ...", 1) "`n"
-    command .= mongoEval(cluster.routerPort, "sh.status('test.restaurants')")
+    command .= mongoEval(cluster.routerPort, "sh.status('restaurantdb.restaurants')")
     command .= "`n`n@ECHO.`n"
-    command .= "@ECHO Cluster Setup complete. Run 'import.bat' to import JSON data.`n"
+    command .= echo(" Cluster Setup complete. Run 'import.bat' to import JSON data.")
     FileAppend, % command , % setupbat
     return
 }
 
-mongoEval(port, command, msg="", config=0) {
-    dbstring := ""
-    if (config = 1) {
-        dbstring := " config "
-    }
+mongoEval(port, command, msg="", db="") {
     if (msg != "") {
-        return % "@ECHO.`n@ECHO " msg "`n@mongo " dbstring " --port " port " --quiet --eval ""printjson(" command ");""`n"
+        return % "@ECHO.`n" echo(msg) "`n@mongo " db " --port " port " --quiet --eval ""printjson(" command ");""`n"
 
     } else {
-        return % "@mongo " dbstring " --port " port " --quiet --eval ""printjson(" command ");""`n"
+        return % "@mongo " db " --port " port " --quiet --eval ""printjson(" command ");""`n"
     }
 }
 
 ; mongo config --port 50000 --quiet --eval "db.settings.save( { _id:'chunksize', value: 1 } )"
+
+
+echo(message) {
+
+    message := StrReplace(message, "`n", "`n@ECHO ")
+
+    return % "`n@ECHO.`n@ECHO " config.line "`n@ECHO  " message "`n@ECHO " config.line "`n" 
+}
