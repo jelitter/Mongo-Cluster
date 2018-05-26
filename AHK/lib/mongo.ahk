@@ -167,11 +167,20 @@ setupRemoveBat() {
     batFile := cluster.folder "\remove.bat"
     command := echo("Removing Replica Set...")
     
+    ; Remove Shard:
+    ; mongo admin --port 50000 --eval "db.adminCommand( { removeShard: 'limerick' } )"
+    ; db.adminCommand( { removeShard: "limerick" } )
+    ;
+    ; wait for draining... (check with same command)
+    ;
+    ; Move DB to primary node:
+    ; mongo admin --port 50000 --eval "db.runCommand( { movePrimary: 'restaurantdb', to: 'cork' } )"
+    ; db.runCommand( { movePrimary: "restaurantDB", to: "cork" })
+
 
     ; 1. Shutdown Servers
-    ; mongo --port PORT NUMBER 
-    ; use admin 
-    ; db.shutdownServer()
+    ; mongo admin --port 50000 --eval "db.shutdownServer({timeoutSecs: 60});"
+
 
     ; 2. Remove secondary nodes
     ; Connect to main node
@@ -197,16 +206,33 @@ setupRemoveBat() {
 
             }
             ; command .= mongoEval(port1, "db.system.replset.remove(db.system.replset.find())", "Removing main node from " toUpper(k), "local") "`n`n"
+            
+            command .= mongoEval(cluster.routerPort
+                , "db.adminCommand( { removeShard: '" k "' } )"
+                , "Removing Shard " toUpper(k) " - WARNING: Wait for draining to complete before continuing`n It may take several minutes.`n Check with: db.adminCommand( { removeShard: '" k "' } ) "
+                , "admin")
+            command .= "`n@ECHO.`n@PAUSE`n"
+
             command .= mongoEval(port1
                 , " (function remove() { var mainNode = db.system.replset.find(); db.system.replset.remove(mainNode)})(); "
                 , "Removing main node from " toUpper(k)
                 , "local") "`n`n"
+            command .= "`n@ECHO.`n@PAUSE`n`n"
 
 
-            ; @mongo local --port 27100 --quiet --eval " (function remove() { var mainNode = db.system.replset.find(); mainNode; db.system.replset.remove(mainNode)})();  "
 
+            ; @mongo local --port 27100 --eval " (function remove() { var mainNode = db.system.replset.find(); mainNode; db.system.replset.remove(mainNode)})();  "
+            ; @mongo local --port 27100 --eval "{ var mainNode = db.system.replset.find(); db.system.replset.remove(mainNode)}"
         }
     }
+
+    ; mongo admin --port 50000 --eval "db.shutdownServer({timeoutSecs: 60})"
+
+    command .= mongoEval(cluster.routerPort
+        , "db.shutdownServer({timeoutSecs: 60})"
+        , "Shutting down server..."
+        , "admin") "`n`n"
+
     FileAppend, % command, % batFile
 
     return
