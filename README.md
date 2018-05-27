@@ -1,7 +1,7 @@
 # MongoDB Sharded Cluster
-### Setup batch files generated with Autohotkey
-Simulation of several shards and nodes @ localhost
-Configuration in data/vars.ahk
+### Setup batch files generated with [Autohotkey](https://autohotkey.com/)
+Simulation of several shards and nodes `@localhost`
+Configuration in `data/vars.ahk`
 
 #### Some screenshots
 ![Dental Clinic Class Diagram](assets/screens/sc1.png)
