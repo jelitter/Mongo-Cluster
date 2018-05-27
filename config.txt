@@ -1,4 +1,4 @@
-Dublin,   6
 Cork,     9
+Dublin,   6
 Limerick, 3
 Galway,   3

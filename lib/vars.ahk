@@ -1,4 +1,4 @@
-global MAX_NODES := 53
+global MAX_NODES := 50
      , MIN_NODES := 3 
 
 ; UI settings
@@ -23,5 +23,5 @@ global cluster := { "shards"        : []
                   , "config"        : ""
                   , "configPort"    : 26050 
                   , "routerPort"    : 50000
-                  , "folder" : "" }
+                  , "folder"        : "" }
 
